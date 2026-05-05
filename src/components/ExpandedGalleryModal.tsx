@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Search, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { X, Search, ChevronLeft, ChevronRight, Trash2, Box } from 'lucide-react';
 import { StudentGeneration } from '../types/generation';
 
 interface ExpandedGalleryModalProps {
@@ -144,6 +144,20 @@ export function ExpandedGalleryModal({ generations, onClose, onSelectGeneration,
                             </div>
                           </div>
                         </>
+                      ) : gen.generation_type === '3d' ? (
+                        gen.thumbnail_url && !thumbnailFailed ? (
+                          <img
+                            src={gen.thumbnail_url}
+                            alt={`3D by ${gen.student_name}`}
+                            className="w-full h-full object-cover"
+                            onError={() => setFailedThumbnails(prev => new Set(prev).add(gen.id))}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-gray-800 to-gray-900">
+                            <Box className="w-8 h-8 text-blue-400" />
+                            <span className="text-[10px] text-gray-400">3D Model</span>
+                          </div>
+                        )
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white text-xs">
                           {gen.generation_type}

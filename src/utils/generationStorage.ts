@@ -215,8 +215,11 @@ export async function saveMeshyGeneration(data: {
   studentName: string;
   modelOwner: string;
   modelName: string;
+  modelId?: string;
   inputs: Record<string, unknown>;
   outputs: string[];
+  thumbnailUrl?: string | null;
+  taskResult?: unknown;
   processingTime: number;
   estimatedCost: number;
   timestamp: string;
@@ -233,13 +236,13 @@ export async function saveMeshyGeneration(data: {
     const { error } = await supabase.from('student_generations').insert({
       student_name: data.studentName.trim(),
       model_name: `${data.modelOwner}/${data.modelName}`,
-      model_version: 'meshy-v1',
+      model_version: data.modelId || 'meshy-v1',
       generation_type: generationType,
       content_url: contentUrl,
-      thumbnail_url: null,
+      thumbnail_url: data.thumbnailUrl ?? null,
       input_data: data.inputs,
       prediction_id: `meshy-${Date.now()}`,
-      output_data: data.outputs,
+      output_data: data.taskResult ?? data.outputs,
     });
 
     if (error) {

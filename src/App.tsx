@@ -20,9 +20,10 @@ import { ImageUpscalerRunner } from './components/ImageUpscalerRunner';
 import { AdminPanel } from './components/AdminPanel';
 import { validateApiKey, refreshModelVersion, clearVersionCache } from './utils/replicateApi';
 import { calculateEstimatedCost } from './utils/costEstimator';
-import { CuratedModel } from './data/curatedModels';
+import { CuratedModel, curatedModels } from './data/curatedModels';
 import { useMobileDetection } from './hooks/useMobileDetection';
 import { initIframeListener, isInIframe } from './utils/iframeApiKey';
+import { StudentGeneration } from './types/generation';
 
 const TERMS_ACCEPTED_KEY = 'terms_accepted_v1';
 
@@ -48,6 +49,7 @@ function App() {
   const [estimatedCost, setEstimatedCost] = useState<number>(0.0025);
   const [hasVersionError, setHasVersionError] = useState(false);
   const [showUpscaler, setShowUpscaler] = useState(false);
+  const [remixInputs, setRemixInputs] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
     // Initialize iframe listener to receive API key from parent window
@@ -126,6 +128,23 @@ function App() {
     setInputs({});
     localStorage.removeItem('student_name');
     localStorage.removeItem('student_password');
+  };
+
+  const handleRemix = (generation: StudentGeneration) => {
+    const modelId = generation.model_version;
+    const found = curatedModels.find(m => m.id === modelId && m.isMeshy);
+    if (!found) return;
+    setModel(null);
+    setCuratedModel(found);
+    setCompletedPrediction(null);
+    setInputs({});
+    setProcessingTime(0);
+    setShowUpscaler(false);
+    setRemixInputs(generation.input_data as Record<string, any>);
+    setCurrentView('generator');
+    setTimeout(() => {
+      document.getElementById('meshy-runner')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
   const handleModelLoaded = (loadedModel: Model, loadedCuratedModel?: CuratedModel) => {
@@ -395,7 +414,7 @@ function App() {
                 />
               </div>
               <div className="space-y-3 sm:space-y-4">
-                <GenerationsPreview isAdmin={isAdmin} />
+                <GenerationsPreview isAdmin={isAdmin} onRemix={handleRemix} />
                 {model && (
                   <div className="space-y-4 sm:space-y-6">
                     <ModelInfo
@@ -458,10 +477,14 @@ function App() {
             )}
 
             {!model && curatedModel && curatedModel.isMeshy && (
-              <MeshyRunner
-                curatedModel={curatedModel}
-                studentName={studentName}
-              />
+              <div id="meshy-runner">
+                <MeshyRunner
+                  curatedModel={curatedModel}
+                  studentName={studentName}
+                  remixInputs={remixInputs}
+                  onRemixConsumed={() => setRemixInputs(null)}
+                />
+              </div>
             )}
 
             {showUpscaler && !model && !curatedModel && (

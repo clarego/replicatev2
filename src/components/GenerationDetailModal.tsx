@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, User, Clock, Cpu, Code, Download, AlertCircle, Timer, Trash2, Loader2 } from 'lucide-react';
+import { X, User, Clock, Cpu, Code, Download, AlertCircle, Timer, Trash2, Loader2, Shuffle } from 'lucide-react';
 import { StudentGeneration, isGenerationExpired, getTimeUntilExpiry } from '../types/generation';
 import { ModelViewer3D } from './ModelViewer3D';
 
@@ -8,9 +8,10 @@ interface GenerationDetailModalProps {
   onClose: () => void;
   isAdmin?: boolean;
   onDelete?: (id: string) => Promise<void>;
+  onRemix?: (generation: StudentGeneration) => void;
 }
 
-export function GenerationDetailModal({ generation, onClose, isAdmin = false, onDelete }: GenerationDetailModalProps) {
+export function GenerationDetailModal({ generation, onClose, isAdmin = false, onDelete, onRemix }: GenerationDetailModalProps) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -217,7 +218,7 @@ export function GenerationDetailModal({ generation, onClose, isAdmin = false, on
             </div>
           )}
 
-          <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between">
+          <div className="mt-6 pt-6 border-t border-gray-200 flex items-center justify-between flex-wrap gap-3">
             <div>
               {isAdmin && onDelete && (
                 <button
@@ -234,7 +235,16 @@ export function GenerationDetailModal({ generation, onClose, isAdmin = false, on
                 </button>
               )}
             </div>
-            <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {generation.generation_type === '3d' && onRemix && (
+                <button
+                  onClick={() => { onRemix(generation); onClose(); }}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+                >
+                  <Shuffle className="w-4 h-4" />
+                  Remix in Interface
+                </button>
+              )}
               {!isExpired ? (
                 <button
                   onClick={handleDownload}

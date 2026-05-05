@@ -24,9 +24,11 @@ import { uploadImage } from '../utils/imageUpload';
 interface MeshyRunnerProps {
   curatedModel: CuratedModel;
   studentName: string;
+  remixInputs?: Record<string, any> | null;
+  onRemixConsumed?: () => void;
 }
 
-export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
+export function MeshyRunner({ curatedModel, studentName, remixInputs, onRemixConsumed }: MeshyRunnerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(0);
@@ -68,6 +70,18 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
     save_pre_remeshed_model: false,
     enable_pbr: true,
   });
+
+  useEffect(() => {
+    if (!remixInputs) return;
+    if (curatedModel.id === 'meshy-text-to-3d') {
+      setTextTo3DInputs(prev => ({ ...prev, ...remixInputs }));
+    } else if (curatedModel.id === 'meshy-image-to-3d') {
+      setImageTo3DInputs(prev => ({ ...prev, ...remixInputs }));
+    } else if (curatedModel.id === 'meshy-multi-image-to-3d') {
+      setMultiImageTo3DInputs(prev => ({ ...prev, ...remixInputs }));
+    }
+    onRemixConsumed?.();
+  }, [remixInputs]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -139,9 +153,12 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
         studentName,
         modelOwner: curatedModel.owner,
         modelName: curatedModel.modelName,
+        modelId: curatedModel.id,
         inputs: curatedModel.id === 'meshy-text-to-3d' ? textTo3DInputs :
                 curatedModel.id === 'meshy-image-to-3d' ? imageTo3DInputs : multiImageTo3DInputs,
         outputs: completed.model_urls?.glb ? [completed.model_urls.glb] : [],
+        thumbnailUrl: completed.thumbnail_url || null,
+        taskResult: completed,
         processingTime,
         estimatedCost: curatedModel.costPerUnit,
         timestamp: new Date().toISOString(),
