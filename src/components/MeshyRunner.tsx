@@ -6,8 +6,11 @@ import {
   createImageTo3DTask,
   createMultiImageTo3DTask,
   pollTaskUntilComplete,
+  createRetextureTask,
+  pollRetextureUntilComplete,
   MeshyTaskResponse,
   MeshyTaskResponseWithEndpoint,
+  MeshyRetextureResponse,
   MeshyTextTo3DPayload,
   MeshyImageTo3DPayload,
   MeshyMultiImageTo3DPayload,
@@ -30,6 +33,11 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
   const [result, setResult] = useState<MeshyTaskResponse | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  const [shouldRetexture, setShouldRetexture] = useState(false);
+  const [retextureResult, setRetextureResult] = useState<MeshyRetextureResponse | null>(null);
+  const [retexturing, setRetexturing] = useState(false);
+  const [retextureProgress, setRetextureProgress] = useState(0);
 
   const [convertingStl, setConvertingStl] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -83,6 +91,8 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
     setError('');
     setProgress(0);
     setResult(null);
+    setRetextureResult(null);
+    setRetextureProgress(0);
     setStartTime(Date.now());
     setElapsedTime(0);
 
@@ -136,6 +146,35 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
         estimatedCost: curatedModel.costPerUnit,
         timestamp: new Date().toISOString(),
       });
+
+      if (shouldRetexture && completed.model_urls?.glb) {
+        setRetexturing(true);
+        try {
+          const prompt = curatedModel.id === 'meshy-text-to-3d'
+            ? textTo3DInputs.prompt
+            : curatedModel.id === 'meshy-image-to-3d'
+              ? 'a detailed realistic 3D object'
+              : 'a detailed realistic 3D object';
+
+          const retextureTask = await createRetextureTask({
+            model_url: completed.model_urls.glb,
+            text_style_prompt: `${prompt}, realistic materials, detailed surface textures`,
+            enable_original_uv: true,
+            enable_pbr: true,
+          });
+
+          const retextured = await pollRetextureUntilComplete(
+            retextureTask.task_id,
+            (p) => setRetextureProgress(p)
+          );
+          setRetextureResult(retextured);
+        } catch (retextureErr) {
+          console.error('Retexture failed:', retextureErr);
+          setError(`Retexture failed: ${retextureErr instanceof Error ? retextureErr.message : 'Unknown error'}`);
+        } finally {
+          setRetexturing(false);
+        }
+      }
 
     } catch (err) {
       setLoading(false);
@@ -266,6 +305,19 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
                 Remesh (optimize topology)
               </label>
             </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="text_retexture"
+                checked={shouldRetexture}
+                onChange={(e) => setShouldRetexture(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="text_retexture" className="text-sm font-medium text-gray-700">
+                Retexture (colorise) — automatically applies realistic colours &amp; materials after generation
+              </label>
+            </div>
           </div>
         )}
 
@@ -380,6 +432,19 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
                 />
                 <label htmlFor="save_pre_remeshed" className="text-sm font-medium text-gray-700">
                   Save pre-remeshed model
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="img_retexture"
+                  checked={shouldRetexture}
+                  onChange={(e) => setShouldRetexture(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="img_retexture" className="text-sm font-medium text-gray-700">
+                  Retexture (colorise) — automatically applies realistic colours &amp; materials after generation
                 </label>
               </div>
             </div>
@@ -513,20 +578,38 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
                   Save pre-remeshed model
                 </label>
               </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="multi_retexture"
+                  checked={shouldRetexture}
+                  onChange={(e) => setShouldRetexture(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="multi_retexture" className="text-sm font-medium text-gray-700">
+                  Retexture (colorise) — automatically applies realistic colours &amp; materials after generation
+                </label>
+              </div>
             </div>
           </div>
         )}
 
         <button
           onClick={handleGenerate}
-          disabled={loading || !isFormValid()}
+          disabled={loading || retexturing || !isFormValid()}
           className={`w-full mt-6 py-3 px-4 rounded-md font-medium flex items-center justify-center gap-2 transition-colors ${
-            loading || !isFormValid()
+            loading || retexturing || !isFormValid()
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 text-white'
           }`}
         >
-          {loading ? (
+          {retexturing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Retexturing... {retextureProgress}%
+            </>
+          ) : loading ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               Generating... {progress}% ({elapsedTime}s)
@@ -621,6 +704,55 @@ export function MeshyRunner({ curatedModel, studentName }: MeshyRunnerProps) {
               <img
                 src={result.thumbnail_url}
                 alt="3D Model Thumbnail"
+                className="w-full rounded-md border border-gray-200"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {retextureResult && retextureResult.model_urls?.glb && (
+        <div className="bg-white p-6 rounded-lg shadow-md border border-blue-200">
+          <h2 className="text-xl font-semibold text-gray-800 mb-1">Retextured Result</h2>
+          <p className="text-sm text-gray-500 mb-4">Colours and materials applied automatically</p>
+
+          <div className="mb-4">
+            <ModelViewer3D modelUrl={retextureResult.model_urls.glb} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a
+              href={retextureResult.model_urls.glb}
+              download
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download Retextured GLB
+            </a>
+            <button
+              onClick={() => handleDownloadStl(retextureResult.model_urls!.glb!)}
+              disabled={convertingStl}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {convertingStl ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Download Retextured STL
+                </>
+              )}
+            </button>
+          </div>
+
+          {retextureResult.thumbnail_url && (
+            <div className="mt-4">
+              <img
+                src={retextureResult.thumbnail_url}
+                alt="Retextured Model Thumbnail"
                 className="w-full rounded-md border border-gray-200"
               />
             </div>

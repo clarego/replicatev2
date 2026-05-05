@@ -181,6 +181,75 @@ export async function pollTaskUntilComplete(
   throw new Error('Task timeout - the 3D model generation took too long. Please try again.');
 }
 
+export interface MeshyRetexturePayload {
+  model_url: string;
+  text_style_prompt: string;
+  enable_original_uv?: boolean;
+  enable_pbr?: boolean;
+}
+
+export interface MeshyRetextureResponse {
+  result: string;
+  task_id: string;
+  status: 'PENDING' | 'IN_PROGRESS' | 'SUCCEEDED' | 'FAILED';
+  model_urls?: {
+    glb?: string;
+    fbx?: string;
+    usdz?: string;
+    obj?: string;
+  };
+  thumbnail_url?: string;
+  progress?: number;
+}
+
+export async function createRetextureTask(
+  payload: MeshyRetexturePayload
+): Promise<MeshyRetextureResponse> {
+  const response = await proxyFetch('/v1/retexture', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Failed to create retexture task: ${err.message || response.statusText}`);
+  }
+
+  const result = await response.json();
+  const taskId = result.result || result.task_id;
+  return { ...result, task_id: taskId };
+}
+
+export async function pollRetextureUntilComplete(
+  taskId: string,
+  onProgress?: (progress: number) => void
+): Promise<MeshyRetextureResponse> {
+  let attempts = 0;
+  const maxAttempts = 300;
+
+  while (attempts < maxAttempts) {
+    const response = await proxyFetch(`/v1/retexture/${taskId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to get retexture status: ${response.statusText}`);
+    }
+
+    const status: MeshyRetextureResponse = await response.json();
+
+    if (onProgress && status.progress !== undefined) {
+      onProgress(status.progress);
+    }
+
+    if (status.status === 'SUCCEEDED') return status;
+    if (status.status === 'FAILED') throw new Error('Retexture task failed');
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    attempts++;
+  }
+
+  throw new Error('Retexture task timed out');
+}
+
 export function proxyMeshyAssetUrl(assetUrl: string | undefined): string {
   if (!assetUrl || !assetUrl.trim()) {
     return '';
