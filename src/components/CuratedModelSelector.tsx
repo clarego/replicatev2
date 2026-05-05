@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Film, Image as ImageIcon, Loader2, Info, Box, X, QrCode, Music, MessageSquare, Megaphone } from 'lucide-react';
+import { Film, Image as ImageIcon, Loader2, Info, Box, X, QrCode, Music, MessageSquare, Megaphone, ZoomIn } from 'lucide-react';
 import { Model } from '../types/replicate';
 import { fetchModel, ReplicateAPIError } from '../utils/replicateApi';
 import { curatedModels, CuratedModel } from '../data/curatedModels';
@@ -7,17 +7,27 @@ import { curatedModels, CuratedModel } from '../data/curatedModels';
 interface CuratedModelSelectorProps {
   onModelLoaded: (model: Model, curatedModel?: CuratedModel) => void;
   onMeshyModelSelected?: (curatedModel: CuratedModel) => void;
+  onUpscalerSelected?: () => void;
 }
 
-type Category = 'video' | 'photo' | '3d' | 'qr' | 'audio' | 'llm' | 'ads' | 'meshy3d';
+type Category = 'video' | 'photo' | '3d' | 'qr' | 'audio' | 'llm' | 'ads' | 'meshy3d' | 'upscaler';
 
-export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: CuratedModelSelectorProps) {
+export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected, onUpscalerSelected }: CuratedModelSelectorProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category>('photo');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedModelInfo, setSelectedModelInfo] = useState<string | null>(null);
 
   const filteredModels = curatedModels.filter(m => m.category === selectedCategory);
+
+  const handleCategorySelect = (cat: Category) => {
+    if (cat === 'upscaler') {
+      setSelectedCategory('upscaler');
+      onUpscalerSelected?.();
+      return;
+    }
+    setSelectedCategory(cat);
+  };
 
   const handleLoadModel = async (curatedModel: CuratedModel) => {
     setError('');
@@ -62,6 +72,8 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
         ) : selectedCategory === 'ads' ? (
           <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+        ) : selectedCategory === 'upscaler' ? (
+          <ZoomIn className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
         ) : (
           <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
         )}
@@ -70,7 +82,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
 
       <div className="grid grid-cols-3 gap-2 mb-4 sm:mb-6">
         <button
-          onClick={() => setSelectedCategory('photo')}
+          onClick={() => handleCategorySelect('photo')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'photo'
               ? 'bg-blue-600 text-white shadow-md'
@@ -84,7 +96,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('video')}
+          onClick={() => handleCategorySelect('video')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'video'
               ? 'bg-blue-600 text-white shadow-md'
@@ -98,7 +110,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('3d')}
+          onClick={() => handleCategorySelect('3d')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === '3d'
               ? 'bg-blue-600 text-white shadow-md'
@@ -111,7 +123,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('qr')}
+          onClick={() => handleCategorySelect('qr')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'qr'
               ? 'bg-blue-600 text-white shadow-md'
@@ -124,7 +136,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('audio')}
+          onClick={() => handleCategorySelect('audio')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'audio'
               ? 'bg-blue-600 text-white shadow-md'
@@ -137,7 +149,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('llm')}
+          onClick={() => handleCategorySelect('llm')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'llm'
               ? 'bg-blue-600 text-white shadow-md'
@@ -150,7 +162,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('ads')}
+          onClick={() => handleCategorySelect('ads')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'ads'
               ? 'bg-blue-600 text-white shadow-md'
@@ -163,7 +175,7 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
           </div>
         </button>
         <button
-          onClick={() => setSelectedCategory('meshy3d')}
+          onClick={() => handleCategorySelect('meshy3d')}
           className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
             selectedCategory === 'meshy3d'
               ? 'bg-purple-600 text-white shadow-md'
@@ -176,9 +188,31 @@ export function CuratedModelSelector({ onModelLoaded, onMeshyModelSelected }: Cu
             <span className="xs:hidden sm:hidden">M3D</span>
           </div>
         </button>
+        <button
+          onClick={() => handleCategorySelect('upscaler')}
+          className={`py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-all text-sm sm:text-base ${
+            selectedCategory === 'upscaler'
+              ? 'bg-teal-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
+            <ZoomIn className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden xs:inline sm:inline">Upscaler</span>
+            <span className="xs:hidden sm:hidden">Up</span>
+          </div>
+        </button>
       </div>
 
-      <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto overflow-x-visible">
+      {selectedCategory === 'upscaler' && (
+        <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg text-center">
+          <ZoomIn className="w-8 h-8 text-teal-600 mx-auto mb-2" />
+          <p className="text-sm font-medium text-teal-800">Image Upscaler loaded</p>
+          <p className="text-xs text-teal-600 mt-1">daanelson/real-esrgan-a100 — upscale images up to 10x</p>
+        </div>
+      )}
+
+      <div className={`space-y-2 max-h-48 sm:max-h-64 overflow-y-auto overflow-x-visible ${selectedCategory === 'upscaler' ? 'hidden' : ''}`}>
         {filteredModels.map((model) => (
           <div key={model.id} className="relative">
             <div className="w-full flex items-start gap-2 p-3 sm:p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">

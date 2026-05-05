@@ -16,6 +16,7 @@ import { TermsOfService } from './components/TermsOfService';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { PasswordChange } from './components/PasswordChange';
 import { MeshyRunner } from './components/MeshyRunner';
+import { ImageUpscalerRunner } from './components/ImageUpscalerRunner';
 import { AdminPanel } from './components/AdminPanel';
 import { validateApiKey, refreshModelVersion, clearVersionCache } from './utils/replicateApi';
 import { calculateEstimatedCost } from './utils/costEstimator';
@@ -46,6 +47,7 @@ function App() {
   const [processingTime, setProcessingTime] = useState<number>(0);
   const [estimatedCost, setEstimatedCost] = useState<number>(0.0025);
   const [hasVersionError, setHasVersionError] = useState(false);
+  const [showUpscaler, setShowUpscaler] = useState(false);
 
   useEffect(() => {
     // Initialize iframe listener to receive API key from parent window
@@ -133,6 +135,7 @@ function App() {
     setInputs({});
     setProcessingTime(0);
     setHasVersionError(false);
+    setShowUpscaler(false);
   };
 
   const handlePredictionComplete = (prediction: Prediction) => {
@@ -379,6 +382,15 @@ function App() {
                     setCompletedPrediction(null);
                     setInputs({});
                     setProcessingTime(0);
+                    setShowUpscaler(false);
+                  }}
+                  onUpscalerSelected={() => {
+                    setShowUpscaler(true);
+                    setModel(null);
+                    setCuratedModel(null);
+                    setCompletedPrediction(null);
+                    setInputs({});
+                    setProcessingTime(0);
                   }}
                 />
               </div>
@@ -450,6 +462,10 @@ function App() {
                 curatedModel={curatedModel}
                 studentName={studentName}
               />
+            )}
+
+            {showUpscaler && !model && !curatedModel && (
+              <ImageUpscalerRunner studentName={studentName} />
             )}
           </div>
         )}

@@ -12,7 +12,7 @@ export interface CuratedModel {
   purpose: string;
   costPerUnit: number;
   costUnit: string;
-  category: 'video' | 'photo' | '3d' | 'qr' | 'audio' | 'llm' | 'ads' | 'meshy3d';
+  category: 'video' | 'photo' | '3d' | 'qr' | 'audio' | 'llm' | 'ads' | 'meshy3d' | 'upscaler';
   examples?: ModelExample[];
   isMeshy?: boolean;
 }
