@@ -4,6 +4,20 @@ import { fetchModel, createPrediction, getPrediction, clearVersionCache } from '
 import { uploadImage } from '../utils/imageUpload';
 import { saveGeneration } from '../utils/generationStorage';
 import { Model, Prediction } from '../types/replicate';
+import { ExamplesDisplay } from './ExamplesDisplay';
+import { ModelExample } from '../data/curatedModels';
+
+const EXAMPLES: ModelExample[] = [
+  {
+    name: 'Face Enhancement (4x)',
+    input: {
+      image: 'https://replicate.delivery/pbxt/IS6z50uYJFdFeh1vCmXe9zasYbG16HqOOMETljyUJ1hmlUXU/keanu.jpeg',
+      scale: 4,
+      face_enhance: true,
+    },
+    output: 'https://replicate.delivery/pbxt/lv0iOW3u6DrNOd30ybfmufqWebiuW10YjILw05YZGbeipZZCB/output.png',
+  },
+];
 
 const OWNER = 'daanelson';
 const MODEL_NAME = 'real-esrgan-a100';
@@ -115,8 +129,17 @@ export function ImageUpscalerRunner({ studentName }: ImageUpscalerRunnerProps) {
     });
   };
 
+  const handleUseExample = (exampleInputs: Record<string, any>) => {
+    if (exampleInputs.image) setImageUrl(String(exampleInputs.image));
+    if (exampleInputs.scale !== undefined) setScale(Number(exampleInputs.scale));
+    if (exampleInputs.face_enhance !== undefined) setFaceEnhance(Boolean(exampleInputs.face_enhance));
+    setOutputUrl('');
+    setError('');
+  };
+
   return (
     <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -248,6 +271,12 @@ export function ImageUpscalerRunner({ studentName }: ImageUpscalerRunnerProps) {
             <p className="text-red-700 text-sm">{error}</p>
           </div>
         )}
+      </div>
+
+      <ExamplesDisplay
+        examples={EXAMPLES}
+        onUseExample={handleUseExample}
+      />
       </div>
 
       {outputUrl && (
